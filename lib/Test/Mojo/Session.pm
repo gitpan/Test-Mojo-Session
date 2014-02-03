@@ -1,9 +1,9 @@
 package Test::Mojo::Session;
 
 use Mojo::Base 'Test::Mojo';
-use Mojo::Util 'b64_decode';
+use Mojo::Util qw(b64_decode hmac_sha1_sum);
 
-our $VERSION = '0.03';
+our $VERSION = '1.0';
 
 sub new {
     my $self = shift->SUPER::new(@_);
@@ -46,9 +46,14 @@ sub _extract_session {
 
     my ($session_cookie) = grep { $_->name eq $session_name } $jar->all;
     return unless $session_cookie;
-    # TODO: check sign with $app->secret
+
     (my $value = $session_cookie->value) =~ s/--([^\-]+)$//;
-    $value =~ tr/-/=/;
+    my $sign = $1;
+
+    my $ok;
+    $sign eq hmac_sha1_sum($value, $_) and $ok = 1 for @{$app->secrets};
+    return unless $ok;
+
     my $session = Mojo::JSON->new->decode(b64_decode $value);
     return $session;
 }
@@ -130,14 +135,13 @@ L<Mojolicious>, L<Test::Mojo>.
 
 =head1 AUTHOR
 
-Andrey Khozov, E<lt>avkhozov@googlemail.comE<gt>
+Andrey Khozov, C<avkhozov@googlemail.com>.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2013 by avkhozov
+Copyright (C) 2013-2014, Andrey Khozov.
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.1 or,
-at your option, any later version of Perl 5 you may have available.
+This program is free software, you can redistribute it and/or modify it under
+the terms of the Artistic License version 2.0.
 
 =cut
